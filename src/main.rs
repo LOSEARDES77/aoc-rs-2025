@@ -3,6 +3,7 @@ use args::{AppArguments, parse};
 
 #[cfg(feature = "today")]
 use advent_of_code::template::Day;
+use std::env;
 #[cfg(feature = "today")]
 use std::process;
 
@@ -96,6 +97,15 @@ mod args {
 }
 
 fn main() {
+    let env = include_str!("../.env");
+    for line in env.lines() {
+        let (key, val) = line
+            .split_once("=")
+            .unwrap_or_else(|| panic!("Error reading env var at line: {}", line));
+        unsafe {
+            env::set_var(key, val);
+        }
+    }
     match parse() {
         Err(err) => {
             eprintln!("Error: {err}");
