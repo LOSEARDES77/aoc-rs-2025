@@ -127,7 +127,6 @@ pub fn part_two(input: &str) -> Option<u64> {
 
     // Find the maximum width across all rows
     let max_width = lines.iter().map(|line| line.len()).max().unwrap_or(0);
-    let num_rows = lines.len() - 1; // Exclude operation row
 
     // Find column groups separated by spaces
     let mut col_groups = Vec::new();
@@ -176,8 +175,8 @@ pub fn part_two(input: &str) -> Option<u64> {
             let mut numbers = vec![];
             for &col in &group {
                 let mut number_str = String::new();
-                for row in 0..num_rows {
-                    if let Some(ch) = lines[row].chars().nth(col)
+                for line in &lines {
+                    if let Some(ch) = line.chars().nth(col)
                         && ch.is_ascii_digit()
                     {
                         number_str.push(ch);
