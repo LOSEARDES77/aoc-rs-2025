@@ -1,6 +1,6 @@
 advent_of_code::solution!(10);
 
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 use rayon::prelude::*;
 
@@ -63,7 +63,6 @@ pub fn part_one(input: &str) -> Option<u64> {
     let sum: usize = machines
         .iter()
         .map(|machine| {
-            use std::collections::HashSet;
             let mut states = HashSet::new();
             let initial_state = vec![false; machine.goal.len()];
             states.insert(initial_state);
@@ -96,70 +95,69 @@ pub fn part_one(input: &str) -> Option<u64> {
     Some(sum as u64)
 }
 
-fn solve_ilp(machine: &Machine) -> usize {
-    let _n_buttons = machine.buttons.len();
-    let n_positions = machine.jolt.len();
-
-    // DFS with memoization
-    fn dfs(
-        current: &[i32],
-        target: &[usize],
-        buttons: &[Vec<usize>],
-        _button_idx: usize,
-        memo: &mut HashMap<Vec<i32>, Option<usize>>,
-    ) -> Option<usize> {
-        // Check if current state matches target
-        if current
-            .iter()
-            .zip(target.iter())
-            .all(|(c, t)| *c == *t as i32)
-        {
-            return Some(0);
-        }
-
-        // Check if any value exceeded target
-        if current
-            .iter()
-            .zip(target.iter())
-            .any(|(c, t)| *c > *t as i32)
-        {
-            return None;
-        }
-
-        // Check memo
-        if let Some(&result) = memo.get(current) {
-            return result;
-        }
-
-        // Try all buttons
-        let mut best = None;
-
-        for (idx, button) in buttons.iter().enumerate() {
-            let mut next = current.to_vec();
-            for &pos in button {
-                next[pos] += 1;
-            }
-
-            if let Some(cost) = dfs(&next, target, buttons, idx, memo) {
-                let total = cost + 1;
-                best = Some(best.map_or(total, |b: usize| b.min(total)));
-            }
-        }
-
-        memo.insert(current.to_vec(), best);
-        best
-    }
-
-    let initial = vec![0i32; n_positions];
-    let mut memo = HashMap::new();
-
-    dfs(&initial, &machine.jolt, &machine.buttons, 0, &mut memo).unwrap_or(usize::MAX)
-}
-
 pub fn part_two(input: &str) -> Option<u64> {
     let machines = parse_input(input);
 
-    let sum: usize = machines.par_iter().map(solve_ilp).sum();
+    let sum: usize = machines
+        .par_iter()
+        .map(|machine| {
+            let mut states = HashSet::new();
+            let initial_state = vec![0; machine.jolt.len()];
+            states.insert(initial_state);
+
+            let mut steps = 0;
+
+            loop {
+                steps += 1;
+
+                let mut next_states = HashSet::new();
+                for state in &states {
+                    for button in &machine.buttons {
+                        let mut new_state = state.clone();
+                        let mut valid = true;
+
+                        for &idx in button {
+                            new_state[idx] += 1;
+                            if new_state[idx] > machine.jolt[idx] {
+                                valid = false;
+                                break;
+                            }
+                        }
+
+                        if valid {
+                            if new_state == machine.jolt {
+                                return steps;
+                            }
+                            next_states.insert(new_state);
+                        }
+                    }
+                }
+
+                states = next_states;
+
+                if states.is_empty() {
+                    return steps;
+                }
+            }
+        })
+        .sum();
 
     Some(sum as u64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_part_one() {
+        let result = part_one(&advent_of_code::template::read_file("examples", DAY));
+        assert_eq!(result, Some(7));
+    }
+
+    #[test]
+    fn test_part_two() {
+        let result = part_two(&advent_of_code::template::read_file("examples", DAY));
+        assert_eq!(result, Some(33));
+    }
 }
